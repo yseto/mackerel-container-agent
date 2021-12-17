@@ -74,3 +74,13 @@ jobs:
         push: true
         tags: ${{ secrets.DOCKERHUB_USERNAME }}/mackerel-container-agent-test:${{ steps.bump_version.outputs.VERSION }}-alpha
 
+    - name: Build Alpha with plugins
+      uses: docker/build-push-action@v2
+      if: startsWith(github.ref, 'refs/heads/bump-version-')
+      with:
+        context: .
+        target: container-agent-with-plugins
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/mackerel-container-agent-test:${{ steps.bump_version.outputs.VERSION }}-plugins-alpha
+
