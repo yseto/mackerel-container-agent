@@ -71,6 +71,12 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+    - uses: docker/login-action@v1
+      with:
+        registry: public.ecr.aws
+        username: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
     - id: bump_version
       if: startsWith(github.ref, 'refs/heads/bump-version-')
       run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/heads\/bump-version-/v}
@@ -107,7 +113,11 @@ jobs:
         target: container-agent
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ steps.tags_version.outputs.VERSION }}
+        tags: |
+          ${{ env.DOCKERHUB_IMAGE_NAME }}:latest
+          ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ steps.tags_version.outputs.VERSION }}
+          ${{ secrets.ECRPUBLIC_IMAGE_NAME }}:latest
+          ${{ secrets.ECRPUBLIC_IMAGE_NAME }}:${{ steps.tags_version.outputs.VERSION }}
 
     - name: Build Release with plugins
       uses: docker/build-push-action@v2
@@ -117,5 +127,9 @@ jobs:
         target: container-agent-with-plugins
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ steps.tags_version.outputs.VERSION }}-plugins
+        tags: |
+          ${{ env.DOCKERHUB_IMAGE_NAME }}:latest-plugins
+          ${{ env.DOCKERHUB_IMAGE_NAME }}:${{ steps.tags_version.outputs.VERSION }}-plugins
+          ${{ secrets.ECRPUBLIC_IMAGE_NAME }}:latest-plugins
+          ${{ secrets.ECRPUBLIC_IMAGE_NAME }}:${{ steps.tags_version.outputs.VERSION }}-plugins
 
