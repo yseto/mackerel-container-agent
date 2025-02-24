@@ -4,6 +4,7 @@ name: ci/cd
 permissions:
   contents: read
   id-token: write
+  packages: write
 
 on:
   pull_request: {}
@@ -159,3 +160,75 @@ jobs:
             mackerel/mackerel-container-agent:${{ steps.get_version.outputs.VERSION }}-plugins
             public.ecr.aws/mackerel/mackerel-container-agent:plugins
             public.ecr.aws/mackerel/mackerel-container-agent:${{ steps.get_version.outputs.VERSION }}-plugins
+
+  build-and-push-yseto-test:
+    if: startsWith(github.ref, 'refs/tags/y')
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+#     - uses: docker/login-action@v3
+#       with:
+#         username: ${{ secrets.DOCKERHUB_USERNAME }}
+#         password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+#     - name: Configure AWS Credentials
+#       uses: aws-actions/configure-aws-credentials@v4
+#       with:
+#         role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
+#         role-session-name: "mackerel-container-agent-${{ github.run_id }}-${{ github.run_number }}"
+#         aws-region: ap-northeast-1
+#     - name: Login to Public ECR
+#       uses: docker/login-action@v3
+#       with:
+#         registry: public.ecr.aws
+#       env:
+#         AWS_REGION: us-east-1
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}"
+
+      - name: Build and push release image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: container-agent
+          platforms: |
+            linux/amd64
+            linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/test:latest
+
+#           mackerel/mackerel-container-agent:latest
+#           mackerel/mackerel-container-agent:${{ steps.get_version.outputs.VERSION }}
+#           public.ecr.aws/mackerel/mackerel-container-agent:latest
+#           public.ecr.aws/mackerel/mackerel-container-agent:${{ steps.get_version.outputs.VERSION }}
+
+#     - name: Build and push release image with plugins
+#       uses: docker/build-push-action@v6
+#       with:
+#         context: .
+#         file: Dockerfile
+#         target: container-agent-with-plugins
+#         platforms: |
+#           linux/amd64
+#           linux/arm64
+#         push: true
+#         tags: |
+#           mackerel/mackerel-container-agent:plugins
+#           mackerel/mackerel-container-agent:${{ steps.get_version.outputs.VERSION }}-plugins
+#           public.ecr.aws/mackerel/mackerel-container-agent:plugins
+#           public.ecr.aws/mackerel/mackerel-container-agent:${{ steps.get_version.outputs.VERSION }}-plugins
